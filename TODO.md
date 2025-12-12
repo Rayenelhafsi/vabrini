@@ -1,19 +1,8 @@
-# TODO List for Professor and Student Interfaces
+# TODO for Professor Login Implementation
 
-- [x] Add http dependency to pubspec.yaml for network communication
-- [x] Update main.dart to display list of present students with vibrate buttons
-- [x] Implement placeholder vibration function using HTTP request
-- [x] Replace HTTP with MQTT for communication
-- [x] Add mqtt_client dependency to pubspec.yaml
-- [x] Update main.dart to use MQTT for fetching student list and sending vibrate commands
-- [x] Run flutter pub get to install dependencies
-- [x] Implement MQTT connection and messaging in main.dart
-- [x] Test the app functionality
-- [x] Update main.dart with MQTT implementation
-- [x] Complete implementation
-- [x] Finalize the app
-- [x] Update TODO.md to mark tasks as completed
-- [x] Separate professor and student interfaces
-- [x] Create student interface to visualize absences number and subjects
-- [x] Add home screen to choose between professor and student
-- [x] Implement MQTT for student absences data
+- [x] Add shared_preferences dependency to pubspec.yaml
+- [x] Update lib/login_screen.dart to save professorId locally after login
+- [x] Update lib/professor_interface.dart to subscribe to "${professorId}/give_me_class" topic
+- [x] Update lib/professor_interface.dart to handle received payload and populate professor details and classes
+- [x] Update lib/professor_interface.dart UI to display name and firstname in navbar, grid of class-subject cards
+- [x] Update lib/professor_interface.dart onTap to publish to "This_is_the_class" with payload

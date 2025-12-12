@@ -1,75 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:mqtt_client/mqtt_client.dart';
-import 'package:mqtt_client/mqtt_server_client.dart';
+import 'mqtt.dart';
+import 'models/professor.dart';
+import 'class_students_screen.dart';
+import 'dart:convert';
 
 class ProfessorInterface extends StatefulWidget {
+  final String professorId;
+
+  ProfessorInterface({required this.professorId});
+
   @override
   _ProfessorInterfaceState createState() => _ProfessorInterfaceState();
 }
 
 class _ProfessorInterfaceState extends State<ProfessorInterface> {
-  late MqttServerClient client;
-  List<String> presentStudents = [];
-  bool isConnected = false;
+  late MqttService mqttService;
+  Professor? professor;
+  List<Map<String, dynamic>> classes = [];
+  bool isDeleteMode = false;
 
   @override
   void initState() {
     super.initState();
+    mqttService = MqttService();
     _connectToMQTT();
+    // Initialize with default professor data, will be updated from MQTT
+    professor = Professor(
+      professorId: widget.professorId,
+      name: '',
+      firstName: '',
+      departmentId: 'CS',
+      imageUrl: null,
+    );
   }
 
   Future<void> _connectToMQTT() async {
-    client = MqttServerClient(
-      'broker.hivemq.com',
-      'flutter_client',
-    ); // Use a public MQTT broker for demo
-    client.logging(on: false);
-    client.keepAlivePeriod = 20;
-    client.onDisconnected = _onDisconnected;
-    client.onConnected = _onConnected;
-    client.onSubscribed = _onSubscribed;
-
-    final connMessage = MqttConnectMessage()
-        .withClientIdentifier('flutter_client')
-        .startClean()
-        .withWillQos(MqttQos.atLeastOnce);
-    client.connectionMessage = connMessage;
-
-    try {
-      await client.connect();
-    } catch (e) {
-      print('Exception: $e');
-      client.disconnect();
-    }
-
-    if (client.connectionStatus!.state == MqttConnectionState.connected) {
-      print('MQTT client connected');
-      setState(() {
-        isConnected = true;
-      });
-      client.subscribe('students/present', MqttQos.atLeastOnce);
-      client.updates!.listen(_onMessage);
-    } else {
-      print(
-        'MQTT client connection failed - disconnecting, state is ${client.connectionStatus!.state}',
-      );
-      client.disconnect();
-    }
-  }
-
-  void _onConnected() {
-    print('Connected');
-  }
-
-  void _onDisconnected() {
-    print('Disconnected');
-    setState(() {
-      isConnected = false;
-    });
-  }
-
-  void _onSubscribed(String topic) {
-    print('Subscribed to $topic');
+    await mqttService.connect('professor_client', onMessage: _onMessage);
+    // Subscribe to give_me_class topic
+    mqttService.subscribe(
+      '${widget.professorId}/give_me_class',
+      MqttQos.atLeastOnce,
+    );
+    setState(() {});
   }
 
   void _onMessage(List<MqttReceivedMessage<MqttMessage>> event) {
@@ -78,48 +51,210 @@ class _ProfessorInterfaceState extends State<ProfessorInterface> {
       recMess.payload.message,
     );
     print('Received message: $pt from topic: ${event[0].topic}');
-    if (event[0].topic == 'students/present') {
-      setState(() {
-        presentStudents = pt.split(',');
-      });
+    if (event[0].topic == '${widget.professorId}/give_me_class') {
+      try {
+        final Map<String, dynamic> data = jsonDecode(pt);
+        setState(() {
+          professor = Professor(
+            professorId: data['idprof'],
+            name: data['name'],
+            firstName: data['firstname'],
+            departmentId: professor?.departmentId ?? 'CS',
+            imageUrl: professor?.imageUrl,
+          );
+          classes = (data['classes'] as List<dynamic>)
+              .map(
+                (item) => {
+                  'className': item['classe'],
+                  'subject': item['matiere'],
+                  'students': [],
+                },
+              )
+              .toList();
+        });
+      } catch (e) {
+        print('Error parsing professor data: $e');
+      }
     }
   }
 
-  void _vibrateStudent(String studentId) {
-    final builder = MqttClientPayloadBuilder();
-    builder.addString('vibrate');
-    client.publishMessage(
-      'students/$studentId/vibrate',
-      MqttQos.exactlyOnce,
-      builder.payload!,
+  void _addClass() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        String className = '';
+        String subject = '';
+        return AlertDialog(
+          title: Text('Add Class'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                onChanged: (value) => className = value,
+                decoration: InputDecoration(labelText: 'Class Name'),
+              ),
+              TextField(
+                onChanged: (value) => subject = value,
+                decoration: InputDecoration(labelText: 'Subject'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                if (className.isNotEmpty && subject.isNotEmpty) {
+                  final message = jsonEncode({
+                    'className': className,
+                    'subject': subject,
+                    'students': [],
+                  });
+                  // TODO: Adjust topic for Node-RED MQTT integration
+                  mqttService.publish(
+                    'professor/${widget.professorId}/addClass',
+                    message,
+                    MqttQos.atLeastOnce,
+                  );
+                  Navigator.pop(context);
+                }
+              },
+              child: Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _removeClass(String className) {
+    // TODO: Adjust topic for Node-RED MQTT integration
+    mqttService.publish(
+      'professor/${widget.professorId}/removeClass',
+      className,
+      MqttQos.atLeastOnce,
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Professor Interface')),
-      body: isConnected
-          ? ListView.builder(
-              itemCount: presentStudents.length,
+      body: Column(
+        children: [
+          // Professor details widget
+          Container(
+            padding: EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 30,
+                  backgroundImage: professor!.imageUrl != null
+                      ? NetworkImage(professor!.imageUrl!)
+                      : null,
+                  child: professor!.imageUrl == null
+                      ? Icon(Icons.person, size: 30)
+                      : null,
+                ),
+                SizedBox(width: 16),
+                Text(
+                  '${professor!.firstName} ${professor!.name}',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+          // Classes grid
+          Expanded(
+            child: GridView.builder(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 1.5,
+              ),
+              itemCount: classes.length,
               itemBuilder: (context, index) {
-                final student = presentStudents[index];
-                return ListTile(
-                  title: Text(student),
-                  trailing: ElevatedButton(
-                    onPressed: () => _vibrateStudent(student),
-                    child: Text('Vibrate'),
+                final classData = classes[index];
+                return Card(
+                  child: InkWell(
+                    onTap: isDeleteMode
+                        ? () => _removeClass(classData['className'])
+                        : () {
+                            // Publish to "This_is_the_class" topic
+                            final message = jsonEncode({
+                              'idprof': professor!.professorId,
+                              'classe_name': classData['className'],
+                              'matiere_name': classData['subject'],
+                            });
+                            mqttService.publish(
+                              'This_is_the_class',
+                              message,
+                              MqttQos.atLeastOnce,
+                            );
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ClassStudentsScreen(
+                                  className: classData['className'],
+                                  subject: classData['subject'],
+                                  students: List<String>.from(
+                                    classData['students'] ?? [],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            classData['className'],
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            classData['subject'],
+                            style: TextStyle(fontSize: 16),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 );
               },
-            )
-          : Center(child: Text('Connecting to MQTT...')),
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            onPressed: () => setState(() => isDeleteMode = !isDeleteMode),
+            child: Icon(isDeleteMode ? Icons.cancel : Icons.delete),
+            tooltip: isDeleteMode ? 'Cancel Delete' : 'Delete Mode',
+          ),
+          SizedBox(height: 16),
+          FloatingActionButton(
+            onPressed: _addClass,
+            child: Icon(Icons.add),
+            tooltip: 'Add Class',
+          ),
+        ],
+      ),
     );
   }
 
   @override
   void dispose() {
-    client.disconnect();
+    mqttService.disconnect();
     super.dispose();
   }
 }

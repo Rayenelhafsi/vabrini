@@ -1,50 +1,50 @@
-class Etudiant {
-  final String studentId;
+class Professor {
+  final String professorId;
   final String name;
   final String firstName;
-  final String classId;
+  final String departmentId;
   final String? imageUrl;
 
-  Etudiant({
-    required this.studentId,
+  Professor({
+    required this.professorId,
     required this.name,
     required this.firstName,
-    required this.classId,
+    required this.departmentId,
     this.imageUrl,
   });
 
-  factory Etudiant.fromJson(Map<String, dynamic> json) {
-    return Etudiant(
-      studentId: json['studentId'] as String,
+  factory Professor.fromJson(Map<String, dynamic> json) {
+    return Professor(
+      professorId: json['professorId'] as String,
       name: json['name'] as String,
       firstName: json['firstName'] as String,
-      classId: json['classId'] as String,
+      departmentId: json['departmentId'] as String,
       imageUrl: json['imageUrl'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'studentId': studentId,
+      'professorId': professorId,
       'name': name,
       'firstName': firstName,
-      'classId': classId,
+      'departmentId': departmentId,
       'imageUrl': imageUrl,
     };
   }
 
-  Etudiant copyWith({
-    String? studentId,
+  Professor copyWith({
+    String? professorId,
     String? name,
     String? firstName,
-    String? classId,
+    String? departmentId,
     String? imageUrl,
   }) {
-    return Etudiant(
-      studentId: studentId ?? this.studentId,
+    return Professor(
+      professorId: professorId ?? this.professorId,
       name: name ?? this.name,
       firstName: firstName ?? this.firstName,
-      classId: classId ?? this.classId,
+      departmentId: departmentId ?? this.departmentId,
       imageUrl: imageUrl ?? this.imageUrl,
     );
   }
@@ -52,20 +52,20 @@ class Etudiant {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is Etudiant &&
-        other.studentId == studentId &&
+    return other is Professor &&
+        other.professorId == professorId &&
         other.name == name &&
         other.firstName == firstName &&
-        other.classId == classId &&
+        other.departmentId == departmentId &&
         other.imageUrl == imageUrl;
   }
 
   @override
   int get hashCode {
-    return studentId.hashCode ^
+    return professorId.hashCode ^
         name.hashCode ^
         firstName.hashCode ^
-        classId.hashCode ^
+        departmentId.hashCode ^
         imageUrl.hashCode;
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mqtt_client/mqtt_client.dart';
-import 'package:mqtt_client/mqtt_server_client.dart';
+import 'mqtt.dart';
 
 class StudentInterface extends StatefulWidget {
   final String studentId;
@@ -12,71 +12,27 @@ class StudentInterface extends StatefulWidget {
 }
 
 class _StudentInterfaceState extends State<StudentInterface> {
-  late MqttServerClient client;
+  late MqttService mqttService;
   Map<String, int> absences = {};
-  bool isConnected = false;
 
   @override
   void initState() {
     super.initState();
+    mqttService = MqttService();
     _connectToMQTT();
   }
 
   Future<void> _connectToMQTT() async {
-    client = MqttServerClient(
-      'broker.hivemq.com',
+    await mqttService.connect(
       'student_${widget.studentId}',
+      onMessage: _onMessage,
     );
-    client.logging(on: false);
-    client.keepAlivePeriod = 20;
-    client.onDisconnected = _onDisconnected;
-    client.onConnected = _onConnected;
-    client.onSubscribed = _onSubscribed;
-
-    final connMessage = MqttConnectMessage()
-        .withClientIdentifier('student_${widget.studentId}')
-        .startClean()
-        .withWillQos(MqttQos.atLeastOnce);
-    client.connectionMessage = connMessage;
-
-    try {
-      await client.connect();
-    } catch (e) {
-      print('Exception: $e');
-      client.disconnect();
-    }
-
-    if (client.connectionStatus!.state == MqttConnectionState.connected) {
-      print('MQTT client connected');
-      setState(() {
-        isConnected = true;
-      });
-      client.subscribe(
-        'students/${widget.studentId}/absences',
-        MqttQos.atLeastOnce,
-      );
-      client.updates!.listen(_onMessage);
-    } else {
-      print(
-        'MQTT client connection failed - disconnecting, state is ${client.connectionStatus!.state}',
-      );
-      client.disconnect();
-    }
-  }
-
-  void _onConnected() {
-    print('Connected');
-  }
-
-  void _onDisconnected() {
-    print('Disconnected');
-    setState(() {
-      isConnected = false;
-    });
-  }
-
-  void _onSubscribed(String topic) {
-    print('Subscribed to $topic');
+    // TODO: Adjust topic for Node-RED MQTT integration
+    mqttService.subscribe(
+      'students/${widget.studentId}/absences',
+      MqttQos.atLeastOnce,
+    );
+    setState(() {});
   }
 
   void _onMessage(List<MqttReceivedMessage<MqttMessage>> event) {
@@ -104,7 +60,7 @@ class _StudentInterfaceState extends State<StudentInterface> {
     int totalAbsences = absences.values.fold(0, (sum, value) => sum + value);
     return Scaffold(
       appBar: AppBar(title: Text('Student Interface - ${widget.studentId}')),
-      body: isConnected
+      body: mqttService.isConnected
           ? Column(
               children: [
                 Padding(
@@ -135,7 +91,7 @@ class _StudentInterfaceState extends State<StudentInterface> {
 
   @override
   void dispose() {
-    client.disconnect();
+    mqttService.disconnect();
     super.dispose();
   }
 }
