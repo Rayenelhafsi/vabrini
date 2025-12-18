@@ -59,33 +59,82 @@ class _StudentInterfaceState extends State<StudentInterface> {
   Widget build(BuildContext context) {
     int totalAbsences = absences.values.fold(0, (sum, value) => sum + value);
     return Scaffold(
-      appBar: AppBar(title: Text('Student Interface - ${widget.studentId}')),
+      appBar: AppBar(
+        title: Text('Student - ${widget.studentId}'),
+      ),
       body: mqttService.isConnected
-          ? Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    'Total Absences: $totalAbsences',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ? Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  Card(
+                    color: Colors.blue.shade50,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.analytics_outlined, size: 28),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Total Absences',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(color: Colors.grey[600]),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '$totalAbsences',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleLarge
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: absences.length,
-                    itemBuilder: (context, index) {
-                      String subject = absences.keys.elementAt(index);
-                      int count = absences[subject]!;
-                      return ListTile(
-                        title: Text(subject),
-                        trailing: Text('$count absences'),
-                      );
-                    },
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.97, end: 1.0),
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                      builder: (context, value, child) {
+                        return Transform.scale(scale: value, child: child);
+                      },
+                      child: Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: ListView.builder(
+                          itemCount: absences.length,
+                          itemBuilder: (context, index) {
+                            String subject = absences.keys.elementAt(index);
+                            int count = absences[subject]!;
+                            return ListTile(
+                              title: Text(subject),
+                              trailing: Text('$count absences'),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             )
-          : Center(child: Text('Connecting to MQTT...')),
+          : const Center(child: Text('Connecting to MQTT...')),
     );
   }
 

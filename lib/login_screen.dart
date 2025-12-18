@@ -57,13 +57,10 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    String topic = _selectedUserType == UserType.professor
-        ? 'professor/login'
-        : 'student/login';
-
-    // TODO: Adjust topic and message for Node-RED MQTT integration
-
-    mqttService.publish(topic, scannedId!, MqttQos.atLeastOnce);
+    // Use existing Node-RED topics without changing Node-RED
+    // Both professor and student use vabrih topic (existing in Node-RED flow)
+    // Node-RED will echo to vabrini topic
+    mqttService.publish('vabrih', scannedId!, MqttQos.atLeastOnce);
 
     // Save professorId locally if professor
     if (_selectedUserType == UserType.professor) {
@@ -94,9 +91,9 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_isScanning) {
       return Scaffold(
         appBar: AppBar(
-          title: Text('Scan QR Code'),
+          title: const Text('Scan QR Code'),
           leading: IconButton(
-            icon: Icon(Icons.arrow_back),
+            icon: const Icon(Icons.arrow_back),
             onPressed: () {
               setState(() {
                 _isScanning = false;
@@ -104,59 +101,177 @@ class _LoginScreenState extends State<LoginScreen> {
             },
           ),
         ),
-        body: MobileScanner(controller: cameraController, onDetect: _onDetect),
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF0D47A1), Color(0xFF1976D2)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+          child: Center(
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.9, end: 1.0),
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeOut,
+              builder: (context, value, child) {
+                return Transform.scale(
+                  scale: value,
+                  child: child,
+                );
+              },
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: AspectRatio(
+                  aspectRatio: 3 / 4,
+                  child: MobileScanner(
+                    controller: cameraController,
+                    onDetect: _onDetect,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       );
     } else {
       return Scaffold(
-        appBar: AppBar(title: Text('Login')),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Select User Type',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Radio<UserType>(
-                    value: UserType.professor,
-                    groupValue: _selectedUserType,
-                    onChanged: (UserType? value) {
-                      setState(() {
-                        _selectedUserType = value!;
-                      });
-                    },
+        appBar: AppBar(title: const Text('Login')),
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.95, end: 1.0),
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.easeOut,
+                builder: (context, value, child) {
+                  return Transform.scale(
+                    scale: value,
+                    child: child,
+                  );
+                },
+                child: Card(
+                  color: Colors.white,
+                  elevation: 6,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
                   ),
-                  Text('Professor'),
-                  SizedBox(width: 20),
-                  Radio<UserType>(
-                    value: UserType.student,
-                    groupValue: _selectedUserType,
-                    onChanged: (UserType? value) {
-                      setState(() {
-                        _selectedUserType = value!;
-                      });
-                    },
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Select User Type',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Row(
+                              children: [
+                                Radio<UserType>(
+                                  value: UserType.professor,
+                                  groupValue: _selectedUserType,
+                                  onChanged: (UserType? value) {
+                                    setState(() {
+                                      _selectedUserType = value!;
+                                    });
+                                  },
+                                ),
+                                const Text('Professor'),
+                              ],
+                            ),
+                            const SizedBox(width: 24),
+                            Row(
+                              children: [
+                                Radio<UserType>(
+                                  value: UserType.student,
+                                  groupValue: _selectedUserType,
+                                  onChanged: (UserType? value) {
+                                    setState(() {
+                                      _selectedUserType = value!;
+                                    });
+                                  },
+                                ),
+                                const Text('Student'),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _scanQRCode,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blueAccent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text('Scan QR Code'),
+                          ),
+                        ),
+                        AnimatedOpacity(
+                          opacity: scannedId != null ? 1 : 0,
+                          duration: const Duration(milliseconds: 300),
+                          child: scannedId != null
+                              ? Padding(
+                                  padding: const EdgeInsets.only(top: 12.0),
+                                  child: Text(
+                                    'Scanned ID: $scannedId',
+                                    style:
+                                        Theme.of(context).textTheme.bodyMedium,
+                                  ),
+                                )
+                              : const SizedBox.shrink(),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: mqttService.isConnected ? _login : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.blueAccent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: const BorderSide(
+                                  color: Colors.blueAccent,
+                                ),
+                              ),
+                            ),
+                            child: const Text('Login'),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (!mqttService.isConnected)
+                          Text(
+                            'Connecting to MQTT...',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(color: Colors.grey[200]),
+                          ),
+                      ],
+                    ),
                   ),
-                  Text('Student'),
-                ],
+                ),
               ),
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _scanQRCode,
-                child: Text('Scan QR Code'),
-              ),
-              if (scannedId != null) Text('Scanned ID: $scannedId'),
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: mqttService.isConnected ? _login : null,
-                child: Text('Login'),
-              ),
-              if (!mqttService.isConnected) Text('Connecting to MQTT...'),
-            ],
+            ),
           ),
         ),
       );

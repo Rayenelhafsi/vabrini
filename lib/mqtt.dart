@@ -10,6 +10,9 @@ class MqttService {
     String clientId, {
     Function(List<MqttReceivedMessage<MqttMessage>>)? onMessage,
   }) async {
+    // Use localhost if MQTT broker is on same computer
+    // Or replace with your computer's IP address if Flutter app runs on phone
+    // Find your IP with: ipconfig (Windows) or ifconfig (Linux/Mac)
     client = MqttServerClient('192.168.137.1:1883', clientId);
     client.logging(on: false);
     client.keepAlivePeriod = 20;
