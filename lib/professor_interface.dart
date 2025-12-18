@@ -30,7 +30,6 @@ class _ProfessorInterfaceState extends State<ProfessorInterface> {
       professorId: widget.professorId,
       name: '',
       firstName: '',
-      departmentId: 'CS',
       imageUrl: null,
     );
   }
@@ -43,14 +42,11 @@ class _ProfessorInterfaceState extends State<ProfessorInterface> {
       MqttQos.atLeastOnce,
     );
     // Also subscribe to vabrini (Node-RED echoes vabrih here)
-    mqttService.subscribe(
-      'vabrini',
-      MqttQos.atLeastOnce,
-    );
+    mqttService.subscribe('vabrini', MqttQos.atLeastOnce);
     // Request professor data by publishing to vabrih (existing Node-RED topic)
     // Note: This triggers the existing flow, but function 1 needs to be triggered
     // from Node-RED dashboard QR code click for full data
-    mqttService.publish('vabrih', widget.professorId, MqttQos.atLeastOnce);
+    mqttService.publish('login', widget.professorId, MqttQos.atLeastOnce);
     setState(() {});
   }
 
@@ -62,13 +58,15 @@ class _ProfessorInterfaceState extends State<ProfessorInterface> {
     print('Received message: $pt from topic: ${event[0].topic}');
     if (event[0].topic == '${widget.professorId}/give_me_class') {
       try {
-        final Map<String, dynamic> data = jsonDecode(pt);
+        final Map<String, dynamic> message = jsonDecode(pt);
+        final Map<String, dynamic> data = message.containsKey('payload')
+            ? message['payload']
+            : message;
         setState(() {
           professor = Professor(
-            professorId: data['idprof'],
+            professorId: data['idprof'].toString(),
             name: data['name'],
-            firstName: data['firstname'],
-            departmentId: professor?.departmentId ?? 'CS',
+            firstName: data['prenom'],
             imageUrl: professor?.imageUrl,
           );
           classes = (data['classes'] as List<dynamic>)
@@ -150,9 +148,7 @@ class _ProfessorInterfaceState extends State<ProfessorInterface> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Professor Dashboard'),
-      ),
+      appBar: AppBar(title: const Text('Professor Dashboard')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -184,17 +180,13 @@ class _ProfessorInterfaceState extends State<ProfessorInterface> {
                         children: [
                           Text(
                             '${professor!.firstName} ${professor!.name}',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
+                            style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'ID: ${professor!.professorId}  •  Dept: ${professor!.departmentId}',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
+                            'ID: ${professor!.professorId} ',
+                            style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(color: Colors.grey[600]),
                           ),
                         ],
@@ -228,9 +220,7 @@ class _ProfessorInterfaceState extends State<ProfessorInterface> {
                       color: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(
-                          color: Colors.blue.shade100,
-                        ),
+                        side: BorderSide(color: Colors.blue.shade100),
                       ),
                       elevation: 2,
                       child: InkWell(
@@ -270,9 +260,7 @@ class _ProfessorInterfaceState extends State<ProfessorInterface> {
                             children: [
                               Text(
                                 classData['className'],
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
+                                style: Theme.of(context).textTheme.titleMedium
                                     ?.copyWith(fontWeight: FontWeight.bold),
                                 textAlign: TextAlign.center,
                               ),
@@ -284,8 +272,11 @@ class _ProfessorInterfaceState extends State<ProfessorInterface> {
                               ),
                               const SizedBox(height: 8),
                               if (isDeleteMode)
-                                const Icon(Icons.delete_outline,
-                                    color: Colors.redAccent, size: 20),
+                                const Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.redAccent,
+                                  size: 20,
+                                ),
                             ],
                           ),
                         ),

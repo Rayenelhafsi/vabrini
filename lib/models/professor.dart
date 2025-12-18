@@ -2,14 +2,12 @@ class Professor {
   final String professorId;
   final String name;
   final String firstName;
-  final String departmentId;
   final String? imageUrl;
 
   Professor({
     required this.professorId,
     required this.name,
     required this.firstName,
-    required this.departmentId,
     this.imageUrl,
   });
 
@@ -18,7 +16,6 @@ class Professor {
       professorId: json['professorId'] as String,
       name: json['name'] as String,
       firstName: json['firstName'] as String,
-      departmentId: json['departmentId'] as String,
       imageUrl: json['imageUrl'] as String?,
     );
   }
@@ -28,7 +25,6 @@ class Professor {
       'professorId': professorId,
       'name': name,
       'firstName': firstName,
-      'departmentId': departmentId,
       'imageUrl': imageUrl,
     };
   }
@@ -37,14 +33,12 @@ class Professor {
     String? professorId,
     String? name,
     String? firstName,
-    String? departmentId,
     String? imageUrl,
   }) {
     return Professor(
       professorId: professorId ?? this.professorId,
       name: name ?? this.name,
       firstName: firstName ?? this.firstName,
-      departmentId: departmentId ?? this.departmentId,
       imageUrl: imageUrl ?? this.imageUrl,
     );
   }
@@ -56,7 +50,6 @@ class Professor {
         other.professorId == professorId &&
         other.name == name &&
         other.firstName == firstName &&
-        other.departmentId == departmentId &&
         other.imageUrl == imageUrl;
   }
 
@@ -65,7 +58,6 @@ class Professor {
     return professorId.hashCode ^
         name.hashCode ^
         firstName.hashCode ^
-        departmentId.hashCode ^
         imageUrl.hashCode;
   }
 }
