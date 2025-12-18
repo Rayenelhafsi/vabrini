@@ -240,3 +240,4 @@ Before asking for help, verify:
 **Once the connection works, your Node-RED flows will be able to query the database!** 🎉
 
 
+

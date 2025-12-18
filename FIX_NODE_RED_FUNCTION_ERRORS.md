@@ -186,3 +186,4 @@ If the forms are working correctly, the functions should receive proper data.
 **These errors won't affect your main application flow** (professor/student login), but fixing them will make the dashboard forms work correctly.
 
 
+

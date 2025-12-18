@@ -268,3 +268,4 @@ This shows your current MySQL user. Use this username in Node-RED.
 **That's it!** The error will be gone. 🎯
 
 
+
